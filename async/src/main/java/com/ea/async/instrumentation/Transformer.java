@@ -637,7 +637,12 @@ public class Transformer implements ClassFileTransformer
                 super.visitInsn(opcode);
             }
         }
-        original.accept(new MyMethodVisitor(replacement));
+        
+        pushArguments(replacement, switchEntries.get(0), arguments);
+        replacement.visitIntInsn(SIPUSH, 0);
+        replacement.visitMethodInsn(INVOKESTATIC, classNode.name, continued.name, continued.desc, false);
+        
+        //original.accept(new MyMethodVisitor(replacement));
 
 
         // if instanceSynchronized all exit paths must release the lock on "this"
@@ -656,6 +661,10 @@ public class Transformer implements ClassFileTransformer
             continued.visitLabel(thisMonitorStart);
             continued.visitTryCatchBlock(thisMonitorStart, thisMonitorEnd, thisMonitorEnd, null);
         }
+        
+        // discard input future
+        continued.visitInsn(ACONST_NULL);
+        continued.visitVarInsn(ASTORE, typeArguments.length - 1);
 
         // get pos
         continued.visitVarInsn(ILOAD, stateArgument.iArgumentLocal);
@@ -731,7 +740,11 @@ public class Transformer implements ClassFileTransformer
         continued.maxStack = Math.max(16, continued.maxStack + 16);
         // adding the continuation method
         continued.accept(classNode);
-
+        
+        
+        System.out.println("-----------------------------");
+        System.out.println("Running transformer on " + replacement.name);
+        System.out.println("-----------------------------");
         // for development use: printMethod(classNode, replacement);
         // for development use: printMethod(classNode, classNode.methods.get(classNode.methods.size() - 2));
         // for development use: printMethod(classNode, continued);
